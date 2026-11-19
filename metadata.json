@@ -1,0 +1,6 @@
+{
+  "name": "My Web Cam",
+  "description": "Turn your Android phone camera into a live Wi-Fi video source and virtual webcam for desktop apps like Zoom, Google Meet, and OBS.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": []
+}

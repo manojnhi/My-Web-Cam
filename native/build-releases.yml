@@ -1,0 +1,68 @@
+name: Build My Web Cam Installers
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+
+jobs:
+  android-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Accept Android SDK Licenses
+        run: |
+          if [ -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}" ]; then
+            yes | "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          fi
+      - name: Build Android APK
+        working-directory: native/android
+        run: |
+          gradle assembleDebug assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: my-web-cam-android-apk
+          path: native/android/app/build/outputs/apk/**/*.apk
+
+  desktop-installers:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            script: dist:win
+            artifact: native/desktop/release/*.exe
+          - os: macos-latest
+            script: dist:mac
+            artifact: native/desktop/release/*.dmg
+          - os: ubuntu-latest
+            script: dist:linux
+            artifact: native/desktop/release/*.AppImage
+    runs-on: ${{ matrix.os }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build Desktop Installer
+        working-directory: native/desktop
+        run: |
+          npm install
+          npm run ${{ matrix.script }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: my-web-cam-desktop-${{ matrix.os }}
+          path: ${{ matrix.artifact }}

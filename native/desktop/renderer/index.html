@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>My Web Cam — Desktop Receiver</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; background: #f8fafc; color: #0f172a; }
+      header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #fff; border-bottom: 1px solid #e2e8f0; }
+      main { max-width: 1120px; margin: 24px auto; padding: 0 24px; display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+      .monitor { background: #0b0f19; border-radius: 14px; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+      canvas { width: 100%; height: 100%; object-fit: contain; }
+      .panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+      input, button { padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+      input { border: 1px solid #cbd5e1; width: 100%; box-sizing: border-box; }
+      button { background: #2563eb; color: #fff; border: none; font-weight: 600; cursor: pointer; }
+      button.secondary { background: #0f172a; }
+      .status { font-size: 13px; color: #475569; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>My Web Cam</strong>
+      <span id="statusText" class="status">Disconnected · Enter phone Wi-Fi URL</span>
+    </header>
+    <main>
+      <div class="monitor">
+        <canvas id="videoCanvas" width="1280" height="720"></canvas>
+      </div>
+      <div class="panel">
+        <label>Phone Connection URL
+          <input id="wsUrl" type="text" placeholder="ws://192.168.1.42:8765" />
+        </label>
+        <label>Remote Password (optional for LAN)
+          <input id="password" type="password" placeholder="Leave blank on local Wi-Fi" />
+        </label>
+        <button id="connectBtn">Connect to Phone</button>
+        <button id="vcamBtn" class="secondary">Enable Virtual Webcam Output</button>
+        <p class="status">
+          Once Virtual Webcam Output is active, select <strong>OBS Virtual Camera</strong> (Windows/macOS) or
+          <strong>My Web Cam (v4l2loopback)</strong> (Linux) inside Zoom, Google Meet, or OBS.
+        </p>
+      </div>
+    </main>
+    <script>
+      const canvas = document.getElementById('videoCanvas');
+      const ctx = canvas.getContext('2d');
+      const statusText = document.getElementById('statusText');
+      let socket = null;
+      let vcamActive = false;
+
+      document.getElementById('connectBtn').addEventListener('click', () => {
+        const url = document.getElementById('wsUrl').value.trim();
+        if (!url) return;
+        if (socket) socket.close();
+        statusText.textContent = 'Connecting over Wi-Fi...';
+        socket = new WebSocket(url);
+        socket.binaryType = 'arraybuffer';
+        socket.onopen = () => { statusText.textContent = 'Connected · Live Video'; };
+        socket.onclose = () => { statusText.textContent = 'Wi-Fi disconnected · Waiting to reconnect'; };
+        socket.onerror = () => { statusText.textContent = 'Connection error · Check phone URL & Wi-Fi'; };
+        socket.onmessage = async (ev) => {
+          if (typeof ev.data === 'string') return;
+          const view = new Uint8Array(ev.data);
+          if (view[0] !== 0x01) return; // 0x01 = JPEG video frame
+          const blob = new Blob([view.subarray(1)], { type: 'image/jpeg' });
+          const bmp = await createImageBitmap(blob);
+          canvas.width = bmp.width;
+          canvas.height = bmp.height;
+          ctx.drawImage(bmp, 0, 0);
+          bmp.close();
+        };
+      });
+
+      document.getElementById('vcamBtn').addEventListener('click', async () => {
+        const url = document.getElementById('wsUrl').value.trim();
+        const password = document.getElementById('password').value;
+        if (!window.myWebCamDesktop) return;
+        if (!vcamActive) {
+          await window.myWebCamDesktop.startVirtualCam(url, password || undefined);
+          vcamActive = true;
+          document.getElementById('vcamBtn').textContent = 'Stop Virtual Webcam Output';
+        } else {
+          await window.myWebCamDesktop.stopVirtualCam();
+          vcamActive = false;
+          document.getElementById('vcamBtn').textContent = 'Enable Virtual Webcam Output';
+        }
+      });
+    </script>
+  </body>
+</html>

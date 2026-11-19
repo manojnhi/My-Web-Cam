@@ -1,0 +1,4 @@
+opencv-python>=4.10.0
+numpy>=1.26.0
+pyvirtualcam>=0.12.1
+websockets>=13.1

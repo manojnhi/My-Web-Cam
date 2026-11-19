@@ -1,0 +1,21 @@
+appId: com.mywebcam.desktop
+productName: My Web Cam
+directories:
+  output: release
+files:
+  - dist/**/*
+  - renderer/**/*
+  - virtual-cam/**/*
+win:
+  target:
+    - nsis
+    - portable
+mac:
+  target:
+    - dmg
+  category: public.app-category.video
+linux:
+  target:
+    - AppImage
+    - deb
+  category: AudioVideo
