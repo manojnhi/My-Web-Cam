@@ -2,6 +2,11 @@
   "name": "my-web-cam-desktop",
   "version": "1.0.0",
   "description": "My Web Cam Desktop Receiver and Virtual Camera Bridge",
+  "author": {
+    "name": "My Web Cam",
+    "email": "noreply@mywebcam.app"
+  },
+  "homepage": "https://github.com/",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
